@@ -1,5 +1,3 @@
-import { throws } from 'assert';
-import { forEach } from 'neo-async';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
