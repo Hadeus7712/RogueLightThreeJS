@@ -329,18 +329,26 @@ export class Map{
         this.rooms.forEach((room) =>{
             let roomBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
             roomBB.setFromCenterAndSize(new THREE.Vector3(room.center.x, 1, room.center.y), new THREE.Vector3(room.w - 1, 3, room.h - 1));
-            this.scene.add(new THREE.Box3Helper(roomBB, 0xFFFF));
+            //this.scene.add(new THREE.Box3Helper(roomBB, 0xFFFF));
 
             this.roomsBB.push(roomBB);
         })
     }
 
     createMesh(){
-        
-        let wallGeometry = new THREE.BoxGeometry(1, 1, 1);
-        let wallMaterial = new THREE.MeshBasicMaterial({color: 0xFF0000});
 
-        let floorMaterial = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+        const textureLoader = new THREE.TextureLoader();
+
+        const wallURL = new URL('../texture/brick.jpg', import.meta.url);
+        const wallTexture = textureLoader.load(wallURL.href);
+
+        const floorURL = new URL('../texture/floor.jpg', import.meta.url);
+        const floorTexture = textureLoader.load(floorURL.href);
+        
+        let wallGeometry = new THREE.BoxGeometry(1, 2, 1);
+        let wallMaterial = new THREE.MeshStandardMaterial({map: wallTexture});
+
+        let floorMaterial = new THREE.MeshStandardMaterial({map: floorTexture});
         let mapToRender = new THREE.Group();
 
         for(let i = 0; i < this.mapSize; i++){
@@ -352,13 +360,13 @@ export class Map{
                 }
                 if(this.map[i][j] == 3){
                     let wall = new THREE.Mesh(wallGeometry, wallMaterial);
-                    wall.position.set(j, 1, i);
+                    wall.position.set(j, 2, i);
                     mapToRender.add(wall);
 
                     const wallBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
                     wallBB.setFromObject(wall);
                     this.wallsBB.push(wallBB);
-                    this.scene.add(new THREE.Box3Helper(wallBB, 0x00FFFF));
+                    //this.scene.add(new THREE.Box3Helper(wallBB, 0x00FFFF));
                 }
                 if(this.map[i][j] == 5){
                     let enemy = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({color: 0x00FF00}));

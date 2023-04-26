@@ -18,13 +18,52 @@ renderer.shadowMap.enabled = true;
 
 document.body.appendChild( renderer.domElement );
 
+
+let musicStart = true;
+
+function playMusic(){
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    const bgMusic = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+    const bgMusicURL = new URL('../src/audio/bgMusic.ogg', import.meta.url);
+
+    audioLoader.load(bgMusicURL.href, (buffer) =>{
+        bgMusic.setBuffer(buffer);
+        bgMusic.setLoop(true);
+        bgMusic.setVolume(0.2);
+        bgMusic.play();    
+    })
+
+}
+
+let hitSound = new THREE.Audio(new THREE.AudioListener());
+
+function loadHitSound(){
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    hitSound = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+    const hitSoundURL = new URL("../src/audio/hitSound.ogg", import.meta.url);
+
+    audioLoader.load(hitSoundURL.href, (buffer)=>{
+        hitSound.setBuffer(buffer);
+        hitSound.setLoop(false)
+        hitSound.setVolume(0.8);
+    })
+}
+
+loadHitSound();
+    
 //const controls = new OrbitControls(camera, renderer.domElement);
 //controls.update();
 
 const ambientLight = new THREE.AmbientLight(0x333333);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 0.8);
+const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 0.9);
 scene.add(directionalLight);
 directionalLight.position.set(0, 10, 5);
 directionalLight.castShadow = true;
@@ -54,6 +93,11 @@ let shootDirection = 'up';
 let isShooting = false;
 
 window.addEventListener('keydown', (event) => {
+    if(musicStart){
+        playMusic();
+        musicStart = false;
+    }
+    
     switch(event.code) {
         case 'KeyW':
             moveForward = true;
@@ -140,6 +184,85 @@ function spawnPlayer(map){
 }
 
 
+const hpBar = document.createElement('div');
+const statsDiv = document.createElement('div');
+
+const hp = document.createElement('img');
+
+function initUI(){
+    hpBar.style = "position: absolute; top: 0px; z-index: 1; width: auto;";
+
+    let hpURL = new URL('../src/texture/heart.png', import.meta.url);
+    hp.src = hpURL.href;
+    hp.width = 100;
+    hp.height = 100;
+    hp.position = 'relative';
+
+    for(let i = 0; i < player.HP; i++){
+        hpBar.appendChild(hp.cloneNode());
+    }
+    document.body.appendChild(hpBar);
+
+
+    statsDiv.style = 'position: absolute; top: 100px; z-index: 1; width: auto; height: auto;';
+    let statsStyle = 'color: White; font-size: 25px; font-family: sans-serif';
+    let speed = document.createElement('div');
+    speed.innerHTML = 'speed: ' + player.speed * 10;
+    speed.style = statsStyle;
+    let shootRange = document.createElement('div');
+    shootRange.innerHTML = 'shootRange: ' + player.bulletLifeTime * 10;
+    shootRange.style = statsStyle;
+    let bulletSpeed = document.createElement('div');
+    bulletSpeed.innerHTML = 'bulletSpeed: ' + player.bulletSpeed * 10;
+    bulletSpeed.style = statsStyle;
+
+    statsDiv.appendChild(speed);
+    statsDiv.appendChild(shootRange);
+    statsDiv.appendChild(bulletSpeed);
+
+    document.body.appendChild(statsDiv);
+}
+
+initUI();
+
+function updateUI(){
+    let statsStyle = 'color: White; font-size: 25px; font-family: sans-serif';
+    let speed = statsDiv.firstChild;
+    speed.innerHTML = 'speed: ' + player.speed * 10;
+    speed.style = statsStyle;
+    let shootRange = statsDiv.children[1];
+    shootRange.innerHTML = 'shootRange: ' + player.bulletLifeTime * 10;
+    shootRange.style = statsStyle;
+    let bulletSpeed = statsDiv.lastChild;
+    bulletSpeed.innerHTML = 'bulletSpeed: ' + player.bulletSpeed * 10;
+    bulletSpeed.style = statsStyle;
+}
+
+const gameOverCanvas = document.createElement('canvas');
+const gameOverContext = gameOverCanvas.getContext('2d');
+
+function gameOver(){
+    let ratio = window.devicePixelRatio;
+
+    gameOverCanvas.width = window.innerWidth * ratio;
+    gameOverCanvas.height = window.innerHeight * ratio;
+
+    gameOverCanvas.id = 'GameOver';
+    gameOverCanvas.style = 'width: ' + gameOverCanvas.width + 'px; height: '+gameOverCanvas.height +'px; position: absolute; z-index: 1; top: 0px;';
+    gameOverContext.globalAlpha = 0.4;
+    gameOverContext.fillRect(0, 0, gameOverCanvas.width, gameOverCanvas.height);
+    gameOverContext.font = '150px Impact';
+    gameOverContext.globalAlpha = 1;
+    gameOverContext.fillStyle = 'White';
+    gameOverContext.textAlign = 'center';
+    gameOverContext.fillText("GAME OVER", gameOverCanvas.width / 2, gameOverCanvas.height / 2);
+    gameOverContext.scale(ratio, ratio);
+
+    document.body.appendChild(gameOverCanvas);
+}
+
+
+
 let clock = new THREE.Clock();
 let roomIndex = 0;
 let room;
@@ -151,20 +274,14 @@ let shotDelay = 0.5;
 let lastHitTime = 0;
 let hitDelay = 1;
 
-let roomFlag = false;
-
-setTimeout(() => {
-    roomFlag = true;
-    console.log("start");
-}, 1000);
 
 
 
+let id;
 
 function animate() {
-	requestAnimationFrame( animate );
+	id = requestAnimationFrame( animate );
     changeCameraPosition();
-
 
     map.roomsBB.forEach(roomBB =>{
         if(player.playerBB.intersectsBox(roomBB)){
@@ -234,7 +351,7 @@ function animate() {
         for(let i = 0; i < map.rooms[roomIndex].enemies.length; i++){
             if(map.rooms[roomIndex].enemies[i].hp <= 0){
                 scene.remove(map.rooms[roomIndex].enemies[i].enemy);
-
+                map.rooms[roomIndex].enemies[i].sound.stop();
 
                 map.rooms[roomIndex].enemies[i].bullets.forEach(bullet =>{
                     scene.remove(bullet.bullet);
@@ -275,6 +392,19 @@ function animate() {
                 player.addBoost(room.item.boost);
 
                 room.item = null;
+                
+                let count = hpBar.childElementCount;
+
+                for(let i = 0; i < count; i++){
+                    hpBar.removeChild(hpBar.lastChild);
+                }
+
+                for(let i = 0; i < player.HP; i++){
+                    hpBar.appendChild(hp.cloneNode());
+                }
+
+                updateUI();
+
             }
         }
     }
@@ -324,8 +454,10 @@ function animate() {
                         bullet.dead = true;
                         scene.remove(bullet.bullet);
                         player.HP -= 1;
-                        
+                        hpBar.removeChild(hpBar.lastChild);
                         console.log("hit player");
+
+                        hitSound.play();
 
                     }
                 })
@@ -334,6 +466,9 @@ function animate() {
                 if(time - lastHitTime > hitDelay){
                     if(enemy.enemyBB.intersectsBox(player.playerBB)){
                         player.HP -= 1;
+                        console.log('player hit')
+                        hpBar.removeChild(hpBar.lastChild);
+                        hitSound.play();
                     }
                     lastHitTime = time;
                 }
@@ -349,7 +484,10 @@ function animate() {
         // }
     }
     
-
+    if(player.HP <= 0){
+        cancelAnimationFrame(id);
+        gameOver();
+    }
 
 	renderer.render( scene, camera )
 }

@@ -1,3 +1,4 @@
+import bufferFrom from 'buffer-from';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
@@ -60,6 +61,9 @@ export class Player {
         this.bulletLifeTime = 0.7;
         this.bulletSpeed = 0.1;
 
+
+        this.pickUpSound;
+        this.shootSound;
 
         //this.init();
         this.load();
@@ -175,12 +179,28 @@ export class Player {
             console.error(error);
         });
 
-        
 
-        // this.player = meshes[1];
-        //this.scene_.add(this.player);
-        // this.player.position.set(3, 1, 3);
-        // this.loaded = true;
+        let listener = new THREE.AudioListener();
+        this.scene_.add(listener);
+
+        this.pickUpSound = new THREE.Audio(listener);
+        let pickUpURL = new URL('../audio/item-equip-6904.mp3', import.meta.url);
+
+
+        let audioLoader = new THREE.AudioLoader();
+        audioLoader.load(pickUpURL.href, (buffer)=>{
+            this.pickUpSound.setBuffer(buffer);
+            this.pickUpSound.setLoop(false);
+            //this.pickUpSound.setVolume(0.5);
+        })
+
+        this.shootSound = new THREE.Audio(listener);
+        let shootURL = new URL('../audio/shoot.ogg', import.meta.url);
+
+        audioLoader.load(shootURL.href, (buffer)=>{
+            this.shootSound.setBuffer(buffer);
+            this.shootSound.setLoop(false);
+        })
 
     }
 
@@ -221,10 +241,12 @@ export class Player {
     }
 
     shoot(shootDirection, scene, player){
+        this.shootSound.play();
         this.bullets.push(new Bullet({shootDirection, scene: this.scene_, player, lifeTime: this.bulletLifeTime, bulletSpeed: this.bulletSpeed}));
     }
 
     addBoost(type){
+        this.pickUpSound.play();
         console.log(type);
         this.changeMode(type);
         switch(type){
@@ -235,13 +257,13 @@ export class Player {
                 this.maxHP += 1;
                 break;
             case 'speedBoost':
-                this.speed += 0.005;
+                this.speed += 0.002;
                 break;
             case 'shootRangeBoost':
-                this.bulletLifeTime += 0.5;
+                this.bulletLifeTime += 0.2;
                 break;
             case 'bulletSpeedBoost':
-                this.bulletSpeed += 0.001;
+                this.bulletSpeed += 0.01;
                 break;
             default:
                 break;

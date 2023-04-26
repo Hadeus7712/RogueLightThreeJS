@@ -52,7 +52,7 @@ export class Item{
         this.mesh.position.copy(this.position);
 
         this.meshBB.setFromObject(this.mesh);
-        this.scene.add(new THREE.Box3Helper(this.meshBB, 0xff0000));
+        //this.scene.add(new THREE.Box3Helper(this.meshBB, 0xff0000));
 
         this.scene.add(this.mesh);
 
@@ -79,6 +79,5 @@ export class Item{
 
     update(){
         this.mesh.rotation.y += 0.1;
-        console.log("item update");
     }
 }

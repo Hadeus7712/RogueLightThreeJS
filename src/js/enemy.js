@@ -1,3 +1,5 @@
+import { throws } from 'assert';
+import { forEach } from 'neo-async';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
@@ -67,38 +69,6 @@ class Enemy{
     }
 
     init(){
-        // const gltfLoader = new GLTFLoader();
-        // gltfLoader.load(this.modelURL.href, (gltf) =>{
-        //     this.enemy = gltf.scene;
-        //     this.enemy.scale.set(this.scale, this.scale, this.scale);
-        //     this.enemy.position.copy(this.position);
-
-        //     this.scene.add(this.enemy);
-
-        //     this.createBB();
-
-        //     this.loaded = true;
-        //     this.clock.start();
-
-        // }, function (xhr){
-
-        //     console.log(( xhr.loaded / xhr.total * 100 ) + '% loaded');
-
-        // }, function(error){
-        //     console.error(error);
-        // });
-
-        
-        // meshes.forEach(mesh =>{
-        //     if(mesh.name == this.name) {
-        //         this.enemy = mesh;
-        //         console.log(mesh);
-        //         this.enemy.position.copy(this.position);
-        //         this.scene.add(this.enemy);
-        //         console.log(this.enemy);
-        //     }
-        // })
-
         meshes.forEach(mesh =>{
             if(mesh.name == this.name) {
                 this.enemy = mesh.clone();
@@ -138,18 +108,33 @@ export class TowerEnemy extends Enemy{
         this.name = 'tower';
 
         //this.modelURL = new URL('../models/towerEnemy/Tower_rock_block_low_poly.glb', import.meta.url);
-
-
+        this.sound = new THREE.Audio(new THREE.AudioListener());
+        this.shootSound = new THREE.Audio(new THREE.AudioListener());
 
         this.init();
+        this.loadSound();
         this.createBB();
 
         setTimeout(() =>{
             this.shootInterval = setInterval(()=>{ 
                 this.shoot(this.direction.clone());
-            }, 1500);
+            }, Math.floor(Math.random() * (1900 - 1400 + 1) + 1400));
         }, 500);
         
+    }
+
+    loadSound(){
+        let listener = new THREE.AudioListener();
+        this.scene.add(listener);
+
+        this.shootSound = new THREE.Audio(listener);
+        let soundURL = new URL('../audio/enemyShoot.ogg', import.meta.url);
+
+        let audioLoader = new THREE.AudioLoader();
+        audioLoader.load(soundURL.href, (buffer)=>{
+            this.shootSound.setBuffer(buffer);
+            this.shootSound.setLoop(false);
+        })
     }
 
     update(player){
@@ -168,6 +153,7 @@ export class TowerEnemy extends Enemy{
     }
 
     shoot(direction){
+        this.shootSound.play();
         this.bullets.push(new Bullet({scene: this.scene, enemy: this.enemy, direction}));
     }
 }
@@ -183,8 +169,13 @@ export class SuicideEnemy extends Enemy{
         
         //this.modelURL = new URL('../models/suicideEnemy/test.glb', import.meta.url);
 
+        this.sound = new THREE.Audio(new THREE.AudioListener());
+
         this.init();
+        this.loadSound();
         this.createBB();
+
+        this.sound.play();
     }
 
     init(){
@@ -202,10 +193,27 @@ export class SuicideEnemy extends Enemy{
 
     }
 
+    loadSound(){
+        let listener = new THREE.AudioListener();
+        this.scene.add(listener);
+
+        this.sound = new THREE.Audio(listener);
+        let soundURL = new URL('../audio/ghost1.mp3', import.meta.url);
+
+        let audioLoader = new THREE.AudioLoader();
+        audioLoader.load(soundURL.href, (buffer)=>{
+            this.sound.setBuffer(buffer);
+            this.sound.setLoop(true);
+            this.sound.setVolume(2);
+        })
+    }
+
     createBB(){
         this.enemyBB = new THREE.Box3(new THREE.Vector3(this.enemy.position.x - 0.5, 0, this.enemy.position.z - 0.5), new THREE.Vector3(this.enemy.position.x + 0.5, 2, this.enemy.position.z + 0.5));
         //this.scene.add(new THREE.Box3Helper(this.enemyBB, 0x00FF00));
     }
+    
+    
 
     update(player){
         if(this.loaded){
@@ -218,6 +226,9 @@ export class SuicideEnemy extends Enemy{
 
             //console.log(this.enemy.position.angleTo(player.position));
             this.enemy.lookAt(player.position);
+
+
+            
 
     }
 }
@@ -238,14 +249,41 @@ export class HybridEnemy extends Enemy{
 
         this.name = 'hybrid';
 
+        this.sound = new THREE.Audio(new THREE.AudioListener());
+        this.shootSound = new THREE.Audio(new THREE.AudioListener());
+
         this.init();
+        this.loadSound();
         this.createBB();
 
         setTimeout(() =>{
             this.shootInterval = setInterval(()=>{ 
                 this.shoot(this.direction.clone());
-            }, 1500);
+            }, Math.floor(Math.random() * (1900 - 1400 + 1) + 1400));
         }, 500);
+
+        this.sound.play();
+    }
+
+    loadSound(){
+        let listener = new THREE.AudioListener();
+        this.scene.add(listener);
+
+        this.sound = new THREE.Audio(listener);
+        let soundURL = new URL('../audio/ghost2.mp3', import.meta.url);
+
+        let audioLoader = new THREE.AudioLoader();
+        audioLoader.load(soundURL.href, (buffer)=>{
+            this.sound.setBuffer(buffer);
+            this.sound.setLoop(true);
+        })
+
+        let shootURL = new URL('../audio/enemyShoot.ogg', import.meta.url);
+        this.shootSound = new THREE.Audio(listener);
+        audioLoader.load(shootURL.href, (buffer)=>{
+            this.shootSound.setBuffer(buffer);
+            this.shootSound.setLoop(false);
+        })
     }
 
     createBB(){
@@ -276,6 +314,7 @@ export class HybridEnemy extends Enemy{
     }
 
     shoot(direction){
+        this.shootSound.play();
         this.bullets.push(new Bullet({scene: this.scene, enemy: this.enemy, direction}));
     }
 }
